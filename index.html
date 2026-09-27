@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>深海鱼群 · WebGPU</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #01121a; }
+    canvas { display: block; touch-action: none; }
+    #hud {
+      position: fixed; left: 28px; bottom: 26px; color: rgba(210, 240, 245, 0.78);
+      font: 300 13px/1.7 "PingFang SC", "Helvetica Neue", sans-serif; letter-spacing: 0.08em;
+      pointer-events: none; user-select: none; transition: opacity 2s ease;
+      text-shadow: 0 1px 8px rgba(0, 20, 30, 0.6);
+    }
+    #hud h1 { margin: 0 0 4px; font-weight: 200; font-size: 22px; letter-spacing: 0.35em; color: rgba(225, 250, 255, 0.9); }
+    #hud .sub { opacity: 0.65; font-size: 11px; }
+    #msg {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #bfe6ee; font: 300 15px/1.8 "PingFang SC", sans-serif; text-align: center; padding: 24px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="msg">正在潜入深海…</div>
+  <div id="hud" style="opacity:0">
+    <h1>深 海 鱼 群</h1>
+    <div>移动鼠标 / 手指划过 驱散鱼群 · 点击产生冲击波</div>
+    <div class="sub" id="info"></div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
