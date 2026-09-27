@@ -47,11 +47,11 @@ export function createFormationDirector( u ) {
 // 镜头：远景环绕 → 贴近鱼群边缘滑过 → 逆光剪影 → 从鱼群下方仰拍
 // exposure：像摄影师一样按镜头调曝光。迎光镜头压低曝光，亮水面保持明亮，鱼群压成剪影
 const SHOTS = [
-	{ name: 'orbit', duration: 26, exposure: 1.0 },
-	{ name: 'glide', duration: 16, exposure: 1.0 },
-	{ name: 'orbit', duration: 12, exposure: 1.0 },
+	{ name: 'orbit', duration: 26, exposure: 0.9 },
+	{ name: 'glide', duration: 16, exposure: 0.9 },
+	{ name: 'orbit', duration: 12, exposure: 0.9 },
 	{ name: 'backlit', duration: 18, exposure: 0.42 },
-	{ name: 'orbit', duration: 10, exposure: 1.0 },
+	{ name: 'orbit', duration: 10, exposure: 0.9 },
 	{ name: 'low', duration: 14, exposure: 0.75 },
 ];
 

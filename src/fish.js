@@ -202,14 +202,15 @@ export function createFish( boids, count ) {
 	const albedo = Fn( () => {
 
 		// 背色在偏绿与偏蓝之间略有差异
-		const back = mix( vec3( 0.035, 0.13, 0.15 ), vec3( 0.04, 0.11, 0.19 ), hueVar );
-		const flank = vec3( 0.8, 0.86, 0.9 );
+		const back = mix( vec3( 0.02, 0.1, 0.12 ), vec3( 0.025, 0.08, 0.16 ), hueVar );
+		const flank = vec3( 0.7, 0.78, 0.84 );
 		const belly = vec3( 0.92, 0.94, 0.96 );
-		const c = mix( flank, back, smoothstep( 0.005, 0.07, g.y ) ).toVar();
+		// 深色鱼背向下延伸到体侧上部，远看也能分辨出鱼形
+		const c = mix( flank, back, smoothstep( - 0.005, 0.05, g.y ) ).toVar();
 		c.assign( mix( c, belly, float( 1 ).sub( smoothstep( - 0.08, - 0.015, g.y ) ) ) );
 		// 体侧线
 		const stripe = float( 1 ).sub( smoothstep( 0.0, 0.01, abs( g.y.sub( 0.03 ) ) ) ).mul( float( 1 ).sub( smoothstep( 0.3, 0.46, g.z ) ) );
-		c.assign( mix( c, vec3( 0.12, 0.5, 0.6 ), stripe.mul( 0.55 ) ) );
+		c.assign( mix( c, vec3( 0.06, 0.3, 0.4 ), stripe.mul( 0.75 ) ) );
 		// 背部斑点
 		const spots = smoothstep( 0.55, 0.9, sin( g.z.mul( 90 ) ).mul( sin( g.x.mul( 140 ) ) ) ).mul( smoothstep( 0.035, 0.07, g.y ) );
 		c.assign( mix( c, vec3( 0.0, 0.02, 0.04 ), spots.mul( 0.5 ) ) );
@@ -232,7 +233,7 @@ export function createFish( boids, count ) {
 	const causticLight = causticAt( positionWorld ).mul( max( normalWorld.y, 0 ) ).mul( 0.5 );
 	material.colorNode = albedo.mul( mix( vec3( 1 ), lightTransmittance( positionWorld.y ), 0.5 ) ).mul( causticLight.add( 1 ) );
 	// 镜面银鳞：高金属度让体侧像镜子一样反射水面的亮光，与深色背部形成强烈反差
-	material.metalnessNode = mix( mix( 0.88, 0.3, smoothstep( 0.01, 0.075, g.y ) ), 0.1, part );
+	material.metalnessNode = mix( mix( 0.9, 0.3, smoothstep( - 0.005, 0.05, g.y ) ), 0.1, part );
 	// 高光抗锯齿：远处的鱼只占几个像素，粗糙度随距离增加，避免高光一帧有一帧无地闪烁
 	const viewDist = length( positionWorld.sub( cameraPosition ) );
 	const baseRough = mix( float( 0.16 ), float( 0.4 ), smoothstep( 12, 60, viewDist ) );

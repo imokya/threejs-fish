@@ -50,7 +50,7 @@ async function main() {
 	// 环境反射（给银色鱼鳞提供明亮的顶光反射）
 	const pmrem = new THREE.PMREMGenerator( renderer );
 	scene.environment = pmrem.fromScene( createEnvironmentScene(), 0.04 ).texture;
-	scene.environmentIntensity = 1.4;
+	scene.environmentIntensity = 1.25;
 
 	// 太阳光（已考虑折射后的角度），投射鱼群阴影
 	const sun = new THREE.DirectionalLight( 0xeafcff, 5.0 );
@@ -66,7 +66,7 @@ async function main() {
 	scene.add( sun, sun.target );
 
 	// 水下四周的散射光：给鱼身一个稳定的漫反射底亮度，近看不会只靠镜面反射而发黑
-	const ambient = new THREE.HemisphereLight( 0x9fdcea, 0x0b2c36, 0.7 );
+	const ambient = new THREE.HemisphereLight( 0x9fdcea, 0x0b2c36, 0.35 );
 	scene.add( ambient );
 
 	const env = createEnvironment();

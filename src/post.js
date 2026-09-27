@@ -23,7 +23,7 @@ export function createPipeline( renderer, scene, camera, sun ) {
 	const MAX_DIST = 120;
 
 	// 更柔、更宽的泛光：水面、光柱和亮鳞周围泛起一层柔光
-	const bloomPass = bloom( sceneColor, 0.62, 0.85, 0.72 );
+	const bloomPass = bloom( sceneColor, 0.5, 0.85, 0.95 );
 
 	// 阴影贴图在首帧渲染后才会创建，所以体积阴影延迟构建
 	const buildOutput = ( shadowDepth ) => {
@@ -116,8 +116,8 @@ export function createPipeline( renderer, scene, camera, sun ) {
 			ldr.assign( mix( ldr, ldr.mul( ldr ).mul( ldr.mul( - 2 ).add( 3 ) ), 0.12 ) );
 			const l = dot( ldr, vec3( 0.2126, 0.7152, 0.0722 ) );
 			ldr.addAssign( vec3( 0.0, 0.035, 0.06 ).mul( float( 1 ).sub( l ).mul( float( 1 ).sub( l ) ) ) );
-			ldr.assign( mix( ldr, ldr.mul( vec3( 1.05, 1.0, 0.92 ) ), smoothstep( 0.55, 1.0, l ).mul( 0.5 ) ) );
-			ldr.assign( ldr.mul( 0.95 ).add( vec3( 0.012, 0.03, 0.038 ) ) );
+			ldr.assign( mix( ldr, ldr.mul( vec3( 1.05, 1.0, 0.92 ) ), smoothstep( 0.6, 1.0, l ).mul( 0.35 ) ) );
+			ldr.assign( ldr.mul( 0.97 ).add( vec3( 0.005, 0.014, 0.018 ) ) );
 			const v = length( off.mul( vec2( 1.2, 1.0 ) ) );
 			ldr.mulAssign( mix( float( 1 ), float( 0.45 ), smoothstep( 0.35, 0.95, v ) ) );
 			return vec4( ldr, 1 );
