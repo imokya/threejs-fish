@@ -44,7 +44,7 @@ async function main() {
 	const scene = new THREE.Scene();
 	scene.fogNode = underwaterFog( output );
 
-	const camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 0.1, 2000 );
+	const camera = new THREE.PerspectiveCamera( 62, window.innerWidth / window.innerHeight, 0.1, 2000 );
 	camera.position.set( 0, 0, 40 );
 
 	// 环境反射（给银色鱼鳞提供明亮的顶光反射）

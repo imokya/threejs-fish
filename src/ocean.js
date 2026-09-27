@@ -7,8 +7,8 @@ import {
 export const SURFACE_Y = 26;
 export const FLOOR_Y = -22;
 
-// 指向太阳的方向（水下折射后的光线方向，略倾斜）
-export const SUN_DIR = new Vector3( 0.32, 1.0, 0.18 ).normalize();
+// 指向太阳的方向（水下折射后的光线方向）：高度约 55°，光柱斜射入水，更有电影感
+export const SUN_DIR = new Vector3( 0.62, 1.0, 0.3 ).normalize();
 export const sunDir = uniform( SUN_DIR );
 
 // 海水的消光系数（每单位距离），红光衰减最快 —— 形成真实的蓝绿色调

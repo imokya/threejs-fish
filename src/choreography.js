@@ -50,7 +50,7 @@ const SHOTS = [
 	{ name: 'orbit', duration: 26, exposure: 0.9 },
 	{ name: 'glide', duration: 16, exposure: 0.9 },
 	{ name: 'orbit', duration: 12, exposure: 0.9 },
-	{ name: 'backlit', duration: 18, exposure: 0.42 },
+	{ name: 'backlit', duration: 18, exposure: 0.7 },
 	{ name: 'orbit', duration: 10, exposure: 0.9 },
 	{ name: 'low', duration: 14, exposure: 0.75 },
 ];
@@ -92,16 +92,16 @@ export function createCameraDirector( camera, forcedShot = null ) {
 
 		} else if ( shot === 'backlit' ) {
 
-			// 逆光剪影：镜头在鱼群下方、背对太阳一侧，迎着阳光仰望，
-			// 鱼群挡在光源前，边缘被勾出亮边，光柱从鱼群缝隙中射出
-			// 太阳偏在鱼群边缘外约 15°：鱼群挡住的是明亮的水面，而不是太阳本身，避免过曝
-			const D = 18 * zoom;
-			const drift = t * 0.05;
-			desired.copy( lookAt ).addScaledVector( SUN_DIR, - D );
-			desired.x += Math.cos( drift ) * 6 + parallax.x * 2;
-			desired.z += Math.sin( drift ) * 6;
-			desired.y += parallax.y;
-			desiredLook.copy( lookAt ).addScaledVector( SUN_DIR, 1.5 );
+			// 侧逆光：镜头与鱼群大致同高，站在背对太阳的一侧水平望去，
+			// 斜射的光柱从鱼群背后穿过，鱼群呈现侧面剪影与亮边
+			const D = 30 * zoom;
+			const hx = - SUN_DIR.x, hz = - SUN_DIR.z;
+			const hl = Math.hypot( hx, hz );
+			const swing = Math.sin( t * 0.05 ) * 0.35;
+			const dx = ( hx / hl ) * Math.cos( swing ) - ( hz / hl ) * Math.sin( swing );
+			const dz = ( hx / hl ) * Math.sin( swing ) + ( hz / hl ) * Math.cos( swing );
+			desired.set( lookAt.x + dx * D + parallax.x * 2, lookAt.y - 3 + parallax.y, lookAt.z + dz * D );
+			desiredLook.set( lookAt.x, lookAt.y + 4, lookAt.z );
 
 		} else if ( shot === 'low' ) {
 
@@ -112,9 +112,10 @@ export function createCameraDirector( camera, forcedShot = null ) {
 
 		} else {
 
-			const R = 40 * zoom;
-			desired.set( lookAt.x + Math.sin( a ) * R, lookAt.y - 7 + Math.sin( t * 0.07 ) * 5 + parallax.y * 1.5, lookAt.z + Math.cos( a ) * R );
-			desiredLook.set( lookAt.x, lookAt.y + 3.5, lookAt.z );
+			// 略低、略近、微仰：鱼群衬着明亮的水面与斜射的光柱，占据更多画面
+			const R = 34 * zoom;
+			desired.set( lookAt.x + Math.sin( a ) * R, lookAt.y - 10 + Math.sin( t * 0.07 ) * 4 + parallax.y * 1.5, lookAt.z + Math.cos( a ) * R );
+			desiredLook.set( lookAt.x, lookAt.y + 5, lookAt.z );
 
 		}
 
