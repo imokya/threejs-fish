@@ -17,7 +17,13 @@ export function createFormationDirector( u ) {
 	let timeInForm = 0;
 	const weights = { ball: 1, tornado: 0, ring: 0, split: 0 };
 
-	return function update( dt, t ) {
+	const director = {
+		forced: null, // 面板指定的形态；null = 自动轮换
+		override: null, // 事件（如擦镜鱼流）临时指定的形态，优先级最高
+		update,
+	};
+
+	function update( dt, t ) {
 
 		timeInForm += dt;
 		if ( timeInForm > FORMATIONS[ index ].duration ) {
@@ -27,7 +33,7 @@ export function createFormationDirector( u ) {
 
 		}
 
-		const current = FORMATIONS[ index ].name;
+		const current = director.override || director.forced || FORMATIONS[ index ].name;
 		const k = 1 - Math.exp( - dt * 0.35 );
 		for ( const name in weights ) weights[ name ] += ( ( name === current ? 1 : 0 ) - weights[ name ] ) * k;
 
@@ -40,7 +46,9 @@ export function createFormationDirector( u ) {
 		const a = t * 0.05;
 		u.splitOffset.value.set( Math.cos( a ) * 12, 1, Math.sin( a ) * 12 );
 
-	};
+	}
+
+	return director;
 
 }
 
@@ -57,7 +65,7 @@ const SHOTS = [
 
 export function createCameraDirector( camera, forcedShot = null ) {
 
-	let index = forcedShot ? Math.max( 0, SHOTS.findIndex( ( s ) => s.name === forcedShot ) ) : 0;
+	let index = 0;
 	let timeInShot = 0;
 	const lookAt = new THREE.Vector3();
 	const lookTarget = new THREE.Vector3();
@@ -66,23 +74,42 @@ export function createCameraDirector( camera, forcedShot = null ) {
 	let first = true;
 	let exposure = 1;
 
-	return function update( dt, t, target, zoom, parallax ) {
+	const director = {
+		forced: forcedShot, // 面板指定的镜头；null = 自动轮换
+		hold: null, // 事件定格：{ position } —— 镜头停在此处，只转头跟拍
+		update,
+	};
+
+	function update( dt, t, target, zoom, parallax ) {
 
 		timeInShot += dt;
-		if ( ! forcedShot && timeInShot > SHOTS[ index ].duration ) {
+		if ( ! director.forced && timeInShot > SHOTS[ index ].duration ) {
 
 			timeInShot = 0;
 			index = ( index + 1 ) % SHOTS.length;
 
 		}
 
-		const shot = SHOTS[ index ].name;
-		const progress = timeInShot / SHOTS[ index ].duration;
+		if ( director.forced && SHOTS[ index ].name !== director.forced ) {
 
-		lookAt.lerp( target, first ? 1 : 1 - Math.exp( - dt * 0.6 ) );
+			index = Math.max( 0, SHOTS.findIndex( ( s ) => s.name === director.forced ) );
+			timeInShot = 0;
+
+		}
+
+		const shot = SHOTS[ index ].name;
+		const progress = ( timeInShot % SHOTS[ index ].duration ) / SHOTS[ index ].duration;
+
+		// 定格时镜头跟拍更灵敏，能跟住高速掠过的鱼流
+		lookAt.lerp( target, first ? 1 : 1 - Math.exp( - dt * ( director.hold ? 2.5 : 0.6 ) ) );
 		const a = t * 0.035 + parallax.x * 0.06;
 
-		if ( shot === 'glide' ) {
+		if ( director.hold ) {
+
+			desired.copy( director.hold.position );
+			desiredLook.copy( lookAt );
+
+		} else if ( shot === 'glide' ) {
 
 			// 沿鱼群外缘快速横移，看清一条条鱼的银鳞与摆尾
 			const a2 = a + ( progress - 0.5 ) * 1.4;
@@ -124,7 +151,7 @@ export function createCameraDirector( camera, forcedShot = null ) {
 		// 镜头之间缓慢推移，而不是硬切
 		const k = first ? 1 : 1 - Math.exp( - dt * 0.45 );
 		camera.position.lerp( desired, k );
-		lookTarget.lerp( desiredLook, first ? 1 : 1 - Math.exp( - dt * 0.8 ) );
+		lookTarget.lerp( desiredLook, first ? 1 : 1 - Math.exp( - dt * ( director.hold ? 3 : 0.8 ) ) );
 		camera.lookAt( lookTarget );
 		camera.updateMatrixWorld();
 		exposure += ( SHOTS[ index ].exposure - exposure ) * ( first ? 1 : 1 - Math.exp( - dt * 0.5 ) );
@@ -132,6 +159,8 @@ export function createCameraDirector( camera, forcedShot = null ) {
 
 		return { lookAt, exposure };
 
-	};
+	}
+
+	return director;
 
 }

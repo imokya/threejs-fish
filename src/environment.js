@@ -200,7 +200,7 @@ function createSurface() {
 	geo.translate( 0, SURFACE_Y, 0 );
 
 	const mat = new THREE.MeshBasicNodeMaterial( { side: THREE.DoubleSide } );
-	const sunAbove = normalize( vec3( SUN_DIR.x * 1.35, SUN_DIR.y, SUN_DIR.z * 1.35 ) );
+	const sunAbove = normalize( vec3( sunDir.x.mul( 1.35 ), sunDir.y, sunDir.z.mul( 1.35 ) ) );
 
 	const waves = [
 		[ 1.0, 0.2, 0.16, 0.9, 0.55 ], [ - 0.4, 1.0, 0.23, 1.1, 0.35 ], [ 0.7, - 0.7, 0.37, 1.4, 0.2 ],

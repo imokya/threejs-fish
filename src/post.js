@@ -18,6 +18,8 @@ export function createPipeline( renderer, scene, camera, sun ) {
 	const uCamPos = uniform( camera.position );
 	const uShadowMatrix = uniform( sun.shadow.matrix );
 	const rayStrength = uniform( 1.0 );
+	// 梦幻调色强度（0 = 写实，1 = 默认梦幻）
+	const dream = uniform( 1.0 );
 
 	const STEPS = 26;
 	const MAX_DIST = 120;
@@ -113,11 +115,12 @@ export function createPipeline( renderer, scene, camera, sun ) {
 			// 色调映射后再做对比度与暗角（显示空间）
 			const ldr = renderOutput( vec4( hdr, 1 ) ).rgb.toVar();
 			// 梦幻调色：放缓对比、暗部偏深青蓝、亮部带奶油暖色、黑位微抬形成柔和的哑光质感
-			ldr.assign( mix( ldr, ldr.mul( ldr ).mul( ldr.mul( - 2 ).add( 3 ) ), 0.12 ) );
+			// dream 越大：对比越柔、暗部越偏青蓝、亮部越暖、黑位越抬
+			ldr.assign( mix( ldr, ldr.mul( ldr ).mul( ldr.mul( - 2 ).add( 3 ) ), float( 0.32 ).sub( dream.mul( 0.2 ) ) ) );
 			const l = dot( ldr, vec3( 0.2126, 0.7152, 0.0722 ) );
-			ldr.addAssign( vec3( 0.0, 0.035, 0.06 ).mul( float( 1 ).sub( l ).mul( float( 1 ).sub( l ) ) ) );
-			ldr.assign( mix( ldr, ldr.mul( vec3( 1.05, 1.0, 0.92 ) ), smoothstep( 0.6, 1.0, l ).mul( 0.35 ) ) );
-			ldr.assign( ldr.mul( 0.97 ).add( vec3( 0.005, 0.014, 0.018 ) ) );
+			ldr.addAssign( vec3( 0.0, 0.035, 0.06 ).mul( float( 1 ).sub( l ).mul( float( 1 ).sub( l ) ) ).mul( dream ) );
+			ldr.assign( mix( ldr, ldr.mul( vec3( 1.05, 1.0, 0.92 ) ), smoothstep( 0.6, 1.0, l ).mul( 0.35 ).mul( dream ) ) );
+			ldr.assign( mix( ldr, ldr.mul( 0.97 ).add( vec3( 0.005, 0.014, 0.018 ) ), dream ) );
 			const v = length( off.mul( vec2( 1.2, 1.0 ) ) );
 			ldr.mulAssign( mix( float( 1 ), float( 0.45 ), smoothstep( 0.35, 0.95, v ) ) );
 			return vec4( ldr, 1 );
@@ -145,6 +148,6 @@ export function createPipeline( renderer, scene, camera, sun ) {
 
 	};
 
-	return { pipeline, render, rayStrength };
+	return { pipeline, render, rayStrength, dream, bloom: bloomPass };
 
 }

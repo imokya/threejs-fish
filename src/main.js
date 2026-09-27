@@ -2,10 +2,12 @@ import * as THREE from 'three/webgpu';
 import { output } from 'three/tsl';
 import { createBoids } from './boids.js';
 import { createFormationDirector, createCameraDirector } from './choreography.js';
-import { createFish } from './fish.js';
+import { createFish, fishBrightness } from './fish.js';
+import { createEvents } from './events.js';
+import { createPanel } from './panel.js';
 import { createEnvironment, createEnvironmentScene, underwaterFog } from './environment.js';
 import { createPipeline } from './post.js';
-import { SUN_DIR, SURFACE_Y, cloudTime, cloudShadeJS } from './ocean.js';
+import { SUN_DIR, SURFACE_Y, cloudTime, cloudShadeJS, waterDensity } from './ocean.js';
 
 const msg = document.getElementById( 'msg' );
 const hud = document.getElementById( 'hud' );
@@ -77,7 +79,7 @@ async function main() {
 	scene.add( fish );
 
 	const post = createPipeline( renderer, scene, camera, sun );
-	if ( params.has( 'debug' ) ) window.__debug = { renderer, boids };
+
 
 	// ---------- 交互 ----------
 	const ndc = new THREE.Vector2( 10, 10 );
@@ -146,6 +148,34 @@ async function main() {
 	const formations = createFormationDirector( u );
 	// ?shot=backlit 等参数可固定某个镜头，便于单独查看
 	const director = createCameraDirector( camera, params.get( 'shot' ) );
+	const events = createEvents( u, camera, formations, director );
+	const baseTarget = new THREE.Vector3();
+
+	// ---------- 调节面板 ----------
+	const sunAzimuth = Math.atan2( SUN_DIR.z, SUN_DIR.x );
+	let exposureScale = 1;
+	const urlShot = params.get( 'shot' );
+	createPanel( ( p ) => {
+
+		fishBrightness.value = p.fishBrightness;
+		scene.environmentIntensity = p.envIntensity;
+		ambient.intensity = p.ambient;
+		post.rayStrength.value = p.rays;
+		post.bloom.strength.value = p.bloom;
+		post.dream.value = p.dream;
+		waterDensity.value = p.density;
+		const el = THREE.MathUtils.degToRad( p.sunElevation );
+		SUN_DIR.set( Math.cos( el ) * Math.cos( sunAzimuth ), Math.sin( el ), Math.cos( el ) * Math.sin( sunAzimuth ) );
+		exposureScale = p.exposure;
+		formations.forced = p.formation === 'auto' ? null : p.formation;
+		director.forced = urlShot || ( p.shot === 'auto' ? null : p.shot );
+		events.state.autoBurst = p.autoBurst;
+		events.state.autoFlyby = p.autoFlyby;
+
+	}, { burstNow: events.burstNow, flybyNow: events.flybyNow }, FISH_COUNT );
+
+	if ( params.has( 'debug' ) ) window.__debug = { renderer, boids, events };
+
 	let elapsed = 0;
 	let started = false;
 
@@ -159,20 +189,21 @@ async function main() {
 		elapsed += dt;
 		const t = elapsed;
 
-		// 汇聚目标沿舒缓的利萨如轨迹游移
-		u.target.value.set(
+		// 汇聚目标沿舒缓的利萨如轨迹游移；受惊爆散、鱼流擦镜等动态事件可临时接管
+		baseTarget.set(
 			Math.sin( t * 0.071 ) * 16,
 			1.5 + Math.sin( t * 0.113 ) * 5,
 			Math.sin( t * 0.053 + 1.3 ) * 13
 		);
+		u.target.value.copy( events.update( dt, baseTarget ) );
 
-		formations( dt, t );
+		formations.update( dt, t );
 
 		// 相机：几种镜头缓慢轮换，随指针轻微视差
 		if ( Math.abs( ndc.x ) <= 1 ) smoothNdc.lerp( ndc, 1 - Math.exp( - dt * 1.5 ) );
-		const shot = director( dt, t, u.target.value, zoom, smoothNdc );
+		const shot = director.update( dt, t, u.target.value, zoom, smoothNdc );
 		const lookAt = shot.lookAt;
-		renderer.toneMappingExposure = shot.exposure;
+		renderer.toneMappingExposure = shot.exposure * exposureScale;
 
 		env.backdrop.position.copy( camera.position );
 		sun.target.position.copy( lookAt );

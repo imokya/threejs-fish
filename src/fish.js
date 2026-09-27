@@ -2,7 +2,7 @@
 import * as THREE from 'three/webgpu';
 import {
 	Fn, instanceIndex, positionLocal, normalLocal, positionGeometry, positionWorld, normalWorld, attribute,
-	cameraPosition, fract, step, vec2, vec3, float, sin, cos, normalize, cross, mix, smoothstep, clamp, hash, varying, length, max, abs,
+	uniform, cameraPosition, fract, step, vec2, vec3, float, sin, cos, normalize, cross, mix, smoothstep, clamp, hash, varying, length, max, abs,
 } from 'three/tsl';
 import { causticAt, lightTransmittance } from './ocean.js';
 
@@ -141,6 +141,9 @@ function mergeGeometries( a, b ) {
 
 }
 
+// 鱼身亮度倍率（调节面板可改）
+export const fishBrightness = uniform( 1 );
+
 export function createFish( boids, count ) {
 
 	const geometry = createFishGeometry();
@@ -256,7 +259,7 @@ export function createFish( boids, count ) {
 	// 背部的焦散光斑与随深度的光衰减
 	// 鱼背上只保留淡淡的焦散光斑；深度衰减减半（环境反射本身已包含水下色调，不重复压暗）
 	const causticLight = causticAt( positionWorld ).mul( max( normalWorld.y, 0 ) ).mul( 0.5 );
-	material.colorNode = albedo.mul( mix( vec3( 1 ), lightTransmittance( positionWorld.y ), 0.5 ) ).mul( causticLight.add( 1 ) );
+	material.colorNode = albedo.mul( fishBrightness ).mul( mix( vec3( 1 ), lightTransmittance( positionWorld.y ), 0.5 ) ).mul( causticLight.add( 1 ) );
 	// 镜面银鳞：高金属度让体侧像镜子一样反射水面的亮光，与深色背部形成强烈反差
 	material.metalnessNode = mix( mix( 0.9, 0.3, smoothstep( - 0.005, 0.05, g.y ) ), 0.1, part );
 	// 高光抗锯齿：远处的鱼只占几个像素，粗糙度随距离增加，避免高光一帧有一帧无地闪烁

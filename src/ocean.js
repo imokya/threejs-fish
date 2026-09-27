@@ -12,10 +12,12 @@ export const SUN_DIR = new Vector3( 0.62, 1.0, 0.3 ).normalize();
 export const sunDir = uniform( SUN_DIR );
 
 // 海水的消光系数（每单位距离），红光衰减最快 —— 形成真实的蓝绿色调
-// 清澈的热带海水
-export const EXTINCTION = vec3( 0.048, 0.017, 0.012 );
+// 水的浑浊度倍率（调节面板可改）：1 = 清澈的热带海水
+export const waterDensity = uniform( 1 );
+// 视线方向的消光（红光衰减最快）
+export const EXTINCTION = vec3( 0.048, 0.017, 0.012 ).mul( waterDensity );
 // 阳光从水面向下传播时的衰减：越深略暗、略蓝
-export const LIGHT_EXTINCTION = vec3( 0.04, 0.014, 0.01 );
+export const LIGHT_EXTINCTION = vec3( 0.04, 0.014, 0.01 ).mul( waterDensity );
 
 // 不同方向上的水体散射颜色（线性空间）
 export const waterColor = /*@__PURE__*/ Fn( ( [ dir ] ) => {
