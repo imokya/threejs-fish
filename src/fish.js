@@ -2,7 +2,7 @@
 import * as THREE from 'three/webgpu';
 import {
 	Fn, instanceIndex, positionLocal, normalLocal, positionGeometry, positionWorld, normalWorld, attribute,
-	cameraPosition, vec2, vec3, float, sin, cos, normalize, cross, mix, smoothstep, clamp, hash, varying, length, max, abs,
+	cameraPosition, fract, step, vec2, vec3, float, sin, cos, normalize, cross, mix, smoothstep, clamp, hash, varying, length, max, abs,
 } from 'three/tsl';
 import { causticAt, lightTransmittance } from './ocean.js';
 
@@ -18,8 +18,9 @@ function createFishGeometry() {
 	const zNose = 0.5;
 	const zTail = - 0.3;
 
-	const profileH = ( t ) => Math.max( 0.118 * 2.25 * Math.pow( t, 0.5 ) * Math.pow( 1 - t, 0.85 ), 0.014 );
-	const profileW = ( t ) => profileH( t ) * ( 0.52 - 0.12 * t );
+	// 沙丁鱼：修长、侧扁（体高约为体长的 1/5，体宽约为体高的 0.4）
+	const profileH = ( t ) => Math.max( 0.105 * 2.25 * Math.pow( t, 0.5 ) * Math.pow( 1 - t, 0.85 ), 0.013 );
+	const profileW = ( t ) => profileH( t ) * ( 0.42 - 0.1 * t );
 
 	// 鼻尖
 	pos.push( 0, 0.004, zNose + 0.012 );
@@ -91,17 +92,17 @@ function createFishGeometry() {
 
 	// 叉形尾鳍
 	const tb = zTail + 0.03;
-	tri( [ 0, 0.022, tb ], [ 0, 0.15, - 0.53 ], [ 0, 0.0, - 0.42 ] );
-	tri( [ 0, 0.022, tb ], [ 0, 0.0, - 0.42 ], [ 0, - 0.022, tb ] );
-	tri( [ 0, - 0.022, tb ], [ 0, 0.0, - 0.42 ], [ 0, - 0.14, - 0.52 ] );
+	tri( [ 0, 0.018, tb ], [ 0, 0.125, - 0.52 ], [ 0, 0.0, - 0.44 ] );
+	tri( [ 0, 0.018, tb ], [ 0, 0.0, - 0.44 ], [ 0, - 0.018, tb ] );
+	tri( [ 0, - 0.018, tb ], [ 0, 0.0, - 0.44 ], [ 0, - 0.118, - 0.51 ] );
 	// 背鳍
-	tri( [ 0, 0.1, 0.14 ], [ 0, 0.175, 0.02 ], [ 0, 0.092, - 0.04 ] );
+	tri( [ 0, 0.088, 0.12 ], [ 0, 0.145, 0.03 ], [ 0, 0.082, - 0.02 ] );
 	// 臀鳍
-	tri( [ 0, - 0.06, - 0.12 ], [ 0, - 0.105, - 0.2 ], [ 0, - 0.04, - 0.22 ] );
+	tri( [ 0, - 0.05, - 0.13 ], [ 0, - 0.085, - 0.2 ], [ 0, - 0.035, - 0.21 ] );
 	// 胸鳍
 	for ( const sx of [ - 1, 1 ] ) {
 
-		tri( [ sx * 0.045, - 0.03, 0.3 ], [ sx * 0.1, - 0.085, 0.17 ], [ sx * 0.045, - 0.05, 0.22 ] );
+		tri( [ sx * 0.032, - 0.035, 0.29 ], [ sx * 0.07, - 0.07, 0.2 ], [ sx * 0.032, - 0.048, 0.23 ] );
 
 	}
 
@@ -203,27 +204,51 @@ export function createFish( boids, count ) {
 
 		// 背色在偏绿与偏蓝之间略有差异
 		const back = mix( vec3( 0.02, 0.1, 0.12 ), vec3( 0.025, 0.08, 0.16 ), hueVar );
-		const flank = vec3( 0.7, 0.78, 0.84 );
+		const flank = vec3( 0.74, 0.8, 0.85 );
 		const belly = vec3( 0.92, 0.94, 0.96 );
-		// 深色鱼背向下延伸到体侧上部，远看也能分辨出鱼形
-		const c = mix( flank, back, smoothstep( - 0.005, 0.05, g.y ) ).toVar();
-		c.assign( mix( c, belly, float( 1 ).sub( smoothstep( - 0.08, - 0.015, g.y ) ) ) );
+
+		// 背腹分界清晰、略带波状
+		const edge = g.y.sub( sin( g.z.mul( 30 ) ).mul( 0.004 ) );
+		const c = mix( flank, back, smoothstep( 0.022, 0.04, edge ) ).toVar();
+		c.assign( mix( c, belly, float( 1 ).sub( smoothstep( - 0.07, - 0.015, g.y ) ) ) );
+
+		// 体侧虹彩：靠腹侧偏粉紫、靠背侧偏青绿（金属反射会被这层颜色染上淡淡的彩光）
+		const irid = mix( vec3( 0.9, 0.76, 0.92 ), vec3( 0.5, 0.86, 0.78 ), smoothstep( - 0.015, 0.03, g.y ) );
+		const flankZone = smoothstep( - 0.035, - 0.005, g.y ).mul( float( 1 ).sub( smoothstep( 0.025, 0.04, edge ) ) );
+		c.assign( mix( c, c.mul( irid ).mul( 1.12 ), flankZone.mul( 0.55 ) ) );
+
 		// 体侧线
-		const stripe = float( 1 ).sub( smoothstep( 0.0, 0.01, abs( g.y.sub( 0.03 ) ) ) ).mul( float( 1 ).sub( smoothstep( 0.3, 0.46, g.z ) ) );
-		c.assign( mix( c, vec3( 0.06, 0.3, 0.4 ), stripe.mul( 0.75 ) ) );
-		// 背部斑点
-		const spots = smoothstep( 0.55, 0.9, sin( g.z.mul( 90 ) ).mul( sin( g.x.mul( 140 ) ) ) ).mul( smoothstep( 0.035, 0.07, g.y ) );
-		c.assign( mix( c, vec3( 0.0, 0.02, 0.04 ), spots.mul( 0.5 ) ) );
+		const stripe = float( 1 ).sub( smoothstep( 0.0, 0.006, abs( g.y.sub( 0.018 ) ) ) ).mul( float( 1 ).sub( smoothstep( 0.28, 0.36, g.z ) ) );
+		c.assign( mix( c, vec3( 0.1, 0.34, 0.42 ), stripe.mul( 0.5 ) ) );
+
+		// 背腹交界下方的一排黑斑（沙丁鱼的标志性特征）
+		const period = 0.075;
+		const dz = fract( g.z.add( 0.02 ).div( period ) ).sub( 0.5 ).mul( period );
+		const spotRow = float( 1 ).sub( smoothstep( 0.006, 0.01, length( vec2( g.y.sub( 0.03 ), dz ) ) ) )
+			.mul( smoothstep( - 0.16, - 0.1, g.z ) ).mul( float( 1 ).sub( smoothstep( 0.24, 0.3, g.z ) ) );
+		c.assign( mix( c, vec3( 0.01, 0.03, 0.05 ), spotRow.mul( 0.85 ) ) );
+
+		// 鳃盖：一道弧形的淡金色反光与深色边缘
+		const gillR = length( vec2( g.y.mul( 1.25 ), g.z.sub( 0.44 ) ) );
+		const gill = smoothstep( 0.035, 0.06, gillR ).mul( float( 1 ).sub( smoothstep( 0.075, 0.085, gillR ) ) ).mul( step( g.z, 0.44 ) );
+		c.assign( mix( c, c.mul( vec3( 1.15, 1.0, 0.7 ) ), gill.mul( 0.55 ) ) );
+		const gillEdge = float( 1 ).sub( smoothstep( 0.0, 0.004, abs( gillR.sub( 0.085 ) ) ) ).mul( step( g.z, 0.44 ) ).mul( step( - 0.05, g.y ) );
+		c.assign( mix( c, vec3( 0.05, 0.1, 0.13 ), gillEdge.mul( 0.5 ) ) );
+
 		// 细密鳞片：只在近景可见的微弱明暗纹理
 		const scales = sin( g.z.mul( 260 ).add( sin( g.y.mul( 320 ) ).mul( 1.3 ) ) ).mul( sin( g.y.mul( 260 ) ) );
-		c.mulAssign( scales.mul( 0.06 ).add( 1 ) );
-		// 眼睛
-		const eye = float( 1 ).sub( smoothstep( 0.013, 0.018, length( vec2( g.y.sub( 0.018 ), g.z.sub( 0.405 ) ) ) ) ).mul( smoothstep( 0.01, 0.03, abs( g.x ) ) );
-		c.assign( mix( c, vec3( 0.01 ), eye ) );
-		// 鳍：半透明感的淡灰蓝
-		c.assign( mix( c, vec3( 0.22, 0.32, 0.36 ), part ) );
+		c.mulAssign( scales.mul( 0.05 ).add( 1 ) );
+
+		// 眼睛：银色虹膜 + 黑色瞳孔
+		const eyeR = length( vec2( g.y.sub( 0.016 ), g.z.sub( 0.405 ) ) );
+		const onSide = smoothstep( 0.008, 0.025, abs( g.x ) );
+		c.assign( mix( c, vec3( 0.75, 0.72, 0.6 ), float( 1 ).sub( smoothstep( 0.014, 0.017, eyeR ) ).mul( onSide ) ) );
+		c.assign( mix( c, vec3( 0.005 ), float( 1 ).sub( smoothstep( 0.008, 0.01, eyeR ) ).mul( onSide ) ) );
+
+		// 鳍：偏深、带水色的灰蓝，在视觉上"退后"，读起来像半透明的薄鳍
+		c.assign( mix( c, vec3( 0.14, 0.24, 0.28 ), part ) );
 		// 个体差异
-		c.mulAssign( mix( 0.82, 1.12, variation ) );
+		c.mulAssign( mix( 0.86, 1.1, variation ) );
 		return c;
 
 	} )();
